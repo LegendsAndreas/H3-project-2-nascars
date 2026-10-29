@@ -1,3 +1,19 @@
+# Unity generated
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+UserSettings/
+
+# Addressables/StreamingAssets caches
+/Assets/StreamingAssets/aa/*
+
+# Unity Cloud Diagnostics
+/Assets/Plugins/Editor/JetBrains*
+
 bin/
 obj/
 /packages/
