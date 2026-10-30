@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 7531372222575654180}
   m_Layer: 0
   m_Name: Car
-  m_TagString: Untagged
+  m_TagString: Car
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -53,6 +53,9 @@ MonoBehaviour:
   BrakeForce: 10
   Friction: 3
   TurnSpeed: 120
+  HasHitCheckpointOne: 0
+  HasHitCheckpointTwo: 0
+  WrongDirection: 0
 --- !u!212 &1186492439901733757
 SpriteRenderer:
   serializedVersion: 3

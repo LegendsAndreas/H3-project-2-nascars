@@ -1,11 +1,6 @@
-using System;
-using System.Text;
-using System.Threading.Tasks;
-using MQTTnet;
-using MQTTnet.Client;
-using MQTTnet.Protocol;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 
 public class Car : MonoBehaviour
 {
@@ -18,17 +13,18 @@ public class Car : MonoBehaviour
     [Header("Steering")] public float TurnSpeed = 120f; // degrees per second at full speed
 
     private float _currentSpeed;
+    public int Laps = 0;
+    public bool HasHitCheckpointOne = false;
+    public bool HasHitCheckpointTwo = false;
+    public bool WrongDirection = false;
 
     private void Start()
     {
     }
+    
     void Update()
     {
-        // Movement();
-    }
-
-    public void GetArduinoInput()
-    {
+        Movement(1,2);
     }
 
     public void Movement(float throttleInput, float steerInput)

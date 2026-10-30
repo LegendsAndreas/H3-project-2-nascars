@@ -31,23 +31,23 @@ public class MqttClient : MonoBehaviour
 
     public async Task StartAsync()
     {
-        var factory = new MqttFactory();
-        var client = factory.CreateMqttClient();
+        MqttFactory factory = new MqttFactory();
+        IMqttClient client = factory.CreateMqttClient();
 
-        var options = new MqttClientOptionsBuilder()
+        MqttClientOptions options = new MqttClientOptionsBuilder()
             .WithTcpServer(_host, _port)
             .WithClientId("csharp-dashboard")
             .Build();
 
         client.ApplicationMessageReceivedAsync += e =>
         {
-            var topic = e.ApplicationMessage.Topic;
+            string topic = e.ApplicationMessage.Topic;
             // Car ID is sent if new car or remove car, otherwise it's a NewInput object.
-            var payload = e.ApplicationMessage.ConvertPayloadToString();
+            string payload = e.ApplicationMessage.ConvertPayloadToString();
 
             if (topic == "cars/input")
             {
-                var input = JsonSerializer.Deserialize<NewInput>(payload);
+                NewInput input = JsonSerializer.Deserialize<NewInput>(payload);
                 if (input != null)
                 {
                     UpdateCarInput(input.CarId, input.Throttle, input.Steering);
@@ -62,14 +62,11 @@ public class MqttClient : MonoBehaviour
                 RemoveCar(payload);
             }
 
-            Console.WriteLine($"{topic}: {payload}");
             return Task.CompletedTask;
         };
 
         await client.ConnectAsync(options);
         await client.SubscribeAsync("cars/#");
-        Console.WriteLine("Lytter…");
-        Console.ReadLine();
     }
 
     public void AddCar(string carId)
