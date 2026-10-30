@@ -6,3 +6,8 @@ riderModule.iml
 .idea/
 .vscode/
 appsettings.*.json
+.vs/
+*.csproj.user
+
+# The API's development settings contain logging options only.
+!Game.Api/appsettings.Development.json
