@@ -3,12 +3,16 @@ using UnityEngine;
 
 public class FinishLine : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    private GameManager _gameManagerScript;
     void Start()
     {
+        _gameManagerScript = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
+        if (_gameManagerScript == null)
+        {
+            throw new Exception("GameManager script not found on GameManager object.");
+        }
     }
 
-    // Update is called once per frame
     void Update()
     {
     }
@@ -25,6 +29,7 @@ public class FinishLine : MonoBehaviour
                 carScript.Laps++;
                 carScript.HasHitCheckpointOne = false;
                 carScript.HasHitCheckpointTwo = false;
+                _gameManagerScript.CarFinishedLap(carScript);
                 Debug.Log($"Car {other.name} completed lap {carScript.Laps}");
             }
             else
