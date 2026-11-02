@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -8,13 +9,18 @@ using UnityEngine;
 
 public class MqttClient : MonoBehaviour
 {
-    private string _host;
-    private int _port;
+    private string _host = "localhost";
+    private int _port = 1883;
 
     [Header("MQTT Settings")]
     public List<GameObject> Cars { get; set; } = new List<GameObject>();
     public GameObject CarPrefab;
     public Transform CarsSpawnPoint;
+    public GameObject GameManager;
+    private GameManager _gameManagerScript;
+    
+    private IMqttClient _client;
+    private readonly ConcurrentQueue<Action> _mainThreadQueue = new ConcurrentQueue<Action>();
 
     public class NewInput
     {
@@ -23,60 +29,87 @@ public class MqttClient : MonoBehaviour
         public float Steering { get; set; }
     }
 
-    public MqttClient(string host, int port = 1883)
+    private async void Start()
     {
-        _host = host;
-        _port = port;
-    }
+        _gameManagerScript = GameManager.GetComponent<GameManager>();
 
-    public async Task StartAsync()
-    {
-        MqttFactory factory = new MqttFactory();
-        IMqttClient client = factory.CreateMqttClient();
-
-        MqttClientOptions options = new MqttClientOptionsBuilder()
-            .WithTcpServer(_host, _port)
-            .WithClientId("csharp-dashboard")
-            .Build();
-
-        client.ApplicationMessageReceivedAsync += e =>
+        try
         {
-            string topic = e.ApplicationMessage.Topic;
-            // Car ID is sent if new car or remove car, otherwise it's a NewInput object.
-            string payload = e.ApplicationMessage.ConvertPayloadToString();
+            var factory = new MqttFactory();
+            _client = factory.CreateMqttClient();
 
-            if (topic == "cars/input")
+            var options = new MqttClientOptionsBuilder()
+                .WithTcpServer(_host, _port)
+                .WithClientId("csharp-dashboard")
+                .Build();
+
+            _client.ApplicationMessageReceivedAsync += e =>
             {
-                NewInput input = JsonSerializer.Deserialize<NewInput>(payload);
-                if (input != null)
+                string topic = e.ApplicationMessage.Topic;
+                string payload = e.ApplicationMessage.ConvertPayloadToString();
+
+                // Runs on a background thread: only parse here, defer Unity work.
+                switch (topic)
                 {
-                    UpdateCarInput(input.CarId, input.Throttle, input.Steering);
+                    case "cars/input":
+                        var input = JsonSerializer.Deserialize<NewInput>(payload);
+                        if (input != null)
+                            _mainThreadQueue.Enqueue(() => UpdateCarInput(input.CarId, input.Throttle, input.Steering));
+                        break;
+
+                    case "cars/new":
+                        _mainThreadQueue.Enqueue(() => AddCar(payload));
+                        break;
+
+                    case "cars/remove":
+                        _mainThreadQueue.Enqueue(() => RemoveCar(payload));
+                        break;
+
+                    default:
+                        Debug.LogWarning($"Unknown topic: {topic}");
+                        break;
                 }
-            }
-            else if (topic == "cars/new")
-            {
-                AddCar(payload);
-            }
-            else if (topic == "cars/remove")
-            {
-                RemoveCar(payload);
-            }
 
-            return Task.CompletedTask;
-        };
+                return Task.CompletedTask;
+            };
 
-        await client.ConnectAsync(options);
-        await client.SubscribeAsync("cars/#");
+            await _client.ConnectAsync(options);
+            await _client.SubscribeAsync("cars/#");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogException(ex);
+        }
+    }
+    
+    private void Update()
+    {
+        while (_mainThreadQueue.TryDequeue(out var action))
+        {
+            try { action(); }
+            catch (Exception ex) { Debug.LogException(ex); }
+        }
+    }
+    
+    private async void OnDestroy()
+    {
+        if (_client != null && _client.IsConnected)
+            await _client.DisconnectAsync();
+        _client?.Dispose();
     }
 
-    public void AddCar(string carId)
+    private void AddCar(string carId)
     {
-        var car = Instantiate(CarPrefab);
+        var spawn = CarsSpawnPoint != null ? CarsSpawnPoint.position : Vector3.zero;
+        var rot = CarsSpawnPoint != null ? CarsSpawnPoint.rotation : Quaternion.identity;
+
+        var car = Instantiate(CarPrefab, spawn, rot);
         car.name = GetCarId(carId);
         Cars.Add(car);
+        _gameManagerScript.UpdatePlayerList(Cars.ToArray());
     }
 
-    public void RemoveCar(string carId)
+    private void RemoveCar(string carId)
     {
         var car = Cars.Find(c => c.name == GetCarId(carId));
         if (car != null)
@@ -86,7 +119,7 @@ public class MqttClient : MonoBehaviour
         }
     }
 
-    public void UpdateCarInput(string carId, float throttle, float steering)
+    private void UpdateCarInput(string carId, float throttle, float steering)
     {
         var car = Cars.Find(c => c.name == GetCarId(carId));
         if (car != null)
