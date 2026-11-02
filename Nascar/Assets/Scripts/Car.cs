@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
@@ -13,13 +14,22 @@ public class Car : MonoBehaviour
     [Header("Steering")] public float TurnSpeed = 120f; // degrees per second at full speed
 
     private float _currentSpeed;
+    
+    [Header("Race Info")]
     public int Laps = 0;
     public bool HasHitCheckpointOne = false;
     public bool HasHitCheckpointTwo = false;
     public bool WrongDirection = false;
+    
+    // private GameManager _gameManagerScript;
 
     private void Start()
     {
+        /*_gameManagerScript = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
+        if (_gameManagerScript == null)
+        {
+            throw new Exception("GameManager script not found on GameManager object.");
+        }*/
     }
     
     void Update()
