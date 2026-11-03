@@ -34,14 +34,14 @@ public class Car : MonoBehaviour
     
     void Update()
     {
-        Movement(1,2);
+        // Movement(1,2);
     }
 
-    public void Movement(float throttleInput, float steerInput)
+    public void Movement(float throttle, float steer)
     {
         // It would be more efficient to just set it once in Start(), but in case the keyboard is disconnected and reconnected,
         // that would not be enough to reconnect the keyboard to the actual game.
-        Keyboard kb = Keyboard.current;
+        /*Keyboard kb = Keyboard.current;
         if (kb == null) return;
 
         float steer = 0f;
@@ -50,7 +50,7 @@ public class Car : MonoBehaviour
         if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) steer += 1f; // left = counterclockwise
         if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) steer -= 1f;
         if (kb.wKey.isPressed || kb.upArrowKey.isPressed) throttle += 1f;
-        if (kb.sKey.isPressed || kb.downArrowKey.isPressed) throttle -= 1f;
+        if (kb.sKey.isPressed || kb.downArrowKey.isPressed) throttle -= 1f;*/
 
         float dt = Time.deltaTime;
 
