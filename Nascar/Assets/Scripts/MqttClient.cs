@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ public class MqttClient : MonoBehaviour
 {
     public string MqttHost;
     public int MqttPort;
+    public string MqttUri;
     public string MqttUsername;
     public string MqttPassword;
 
@@ -21,6 +23,9 @@ public class MqttClient : MonoBehaviour
     public GameObject GameManager;
     private GameManager _gameManagerScript;
     public List<SpawnPoint> CarSpawnPoints;
+    
+    [Header("Car Settings")]
+    public List<CarSprite> CarSprites = new List<CarSprite>();
     
     private IMqttClient _client;
     private readonly ConcurrentQueue<Action> _mainThreadQueue = new ConcurrentQueue<Action>();
@@ -42,6 +47,13 @@ public class MqttClient : MonoBehaviour
         public Transform Transform;
         public bool IsFree = true;
     }
+    
+    [Serializable]
+    public class CarSprite
+    {
+        public bool IsFree = true;
+        public Sprite Sprite;
+    }
 
     private async void Start()
     {
@@ -51,13 +63,19 @@ public class MqttClient : MonoBehaviour
         {
             var factory = new MqttFactory();
             _client = factory.CreateMqttClient();
-
             var options = new MqttClientOptionsBuilder()
-                .WithWebSocketServer(o => o.WithUri("wss://c613c7e6.ala.eu-central-1.emqxsl.com:8084/mqtt"))
+                .WithTcpServer(MqttHost, MqttPort)
+                .WithClientId("csharp-dashboard")
+                .Build();
+
+            // wss://c613c7e6.ala.eu-central-1.emqxsl.com:8084/mqtt
+            /*var options = new MqttClientOptionsBuilder()
+                .WithWebSocketServer(o => o.WithUri(MqttUri))
                 .WithCredentials(MqttUsername, MqttPassword)
                 .WithClientId("unity-test-01")
+                .WithKeepAlivePeriod(TimeSpan.FromSeconds(15))
                 .WithTlsOptions(o => o.UseTls())
-                .Build();
+                .Build();*/
 
             _client.ApplicationMessageReceivedAsync += e =>
             {
@@ -69,13 +87,15 @@ public class MqttClient : MonoBehaviour
                 {
                     case "cars/input":
                         var input = JsonSerializer.Deserialize<NewInput>(payload);
-                        if (input != null)
-                            _latestInputs[input.CarId] = (input.Throttle, input.Steering);
+                        // Debug.Log($"Received input: {input.CarId}, Throttle: {input.Throttle}, Steering: {input.Steering}");
+                        _latestInputs[input.CarId] = (input.Throttle, input.Steering);
                         break;
                     case "cars/new":
+                        Debug.Log($"Received new car request: {payload}");
                         _mainThreadQueue.Enqueue(() => AddCar(payload));
                         break;
                     case "cars/remove":
+                        Debug.Log($"Received remove car request: {payload}");
                         _mainThreadQueue.Enqueue(() => RemoveCar(payload));
                         break;
                     default:
@@ -130,36 +150,115 @@ public class MqttClient : MonoBehaviour
         {
             Debug.LogWarning("No spawn point found for new car.");
         }
+        
+        CarSprite carSprite = CarSprites.Find(s => s.IsFree);
+        if (carSprite == null)
+        {
+            Debug.LogWarning("No free car sprite found for new car.");
+            return;
+        }
 
         var car = Instantiate(CarPrefab, spawn, rot);
-        car.name = GetCarId(carId);
+        car.name = GetCarIdWithPrefix(carId);
+        car.GetComponent<SpriteRenderer>().sprite = carSprite.Sprite;
+        carSprite.IsFree = false;
+        
+        PublishCarName(carId, carSprite.Sprite.name);
+        
         Cars.Add(car);
         _gameManagerScript.UpdatePlayerList(Cars.ToArray());
     }
 
     private void RemoveCar(string carId)
     {
-        var car = Cars.Find(c => c.name == GetCarId(carId));
-        if (car is not null)
+        var car = Cars.Find(c => c.name == GetCarIdWithPrefix(carId));
+        if (car != null)
         {
+            var spawnPoint = CarSpawnPoints.First(sp => !sp.IsFree);
+            spawnPoint.IsFree = true;
+            
+            var carSprite = CarSprites.First(cs => !cs.IsFree);
+            carSprite.IsFree = true;
+            
+            _gameManagerScript.UpdatePlayerList(Cars.ToArray());
+
             Cars.Remove(car);
             Destroy(car);
+        }
+        else
+        {
+            Debug.LogWarning($"Car with ID {carId} not found for removal.");
         }
     }
 
     private void UpdateCarInput(string carId, float throttle, float steering)
     {
         // Debug.Log($"Received input for car {carId}: throttle={throttle}, steering={steering}");
-        var car = Cars.Find(c => c.name == GetCarId(carId));
-        if (car is not null)
+        var car = Cars.Find(c => c.name == GetCarIdWithPrefix(carId));
+        if (car != null)
         {
             var carScript = car.GetComponent<Car>();
-            if (carScript is not null)
+            if (carScript != null)
             {
                 carScript.Movement(throttle, steering);
             }
         }
+        else
+        {
+            Debug.LogWarning($"Car with ID {carId} not found for input update.");
+        }
     }
     
-    private string GetCarId(string carId) => "car-" + carId;
+    public void PublishLapCompletion(string carName, int lapCount)
+    {
+        if (_client != null && _client.IsConnected)
+        {
+            var message = new MqttApplicationMessageBuilder()
+                .WithTopic("cars/laps")
+                .WithPayload(JsonSerializer.Serialize(new { carId = carName.Split('-')[1], lapCount }))
+                .Build();
+
+            _client.PublishAsync(message);
+        }
+        else
+        {
+            Debug.LogWarning("MQTT client is not connected. Cannot publish lap completion.");
+        }
+    }
+
+    private void PublishCarName(string carId, string username)
+    {
+        if (_client != null && _client.IsConnected)
+        {
+            var message = new MqttApplicationMessageBuilder()
+                .WithTopic("cars/name")
+                .WithPayload(JsonSerializer.Serialize(new { carId, name = username }))
+                .Build();
+
+            _client.PublishAsync(message);
+        }
+        else
+        {
+            Debug.LogWarning("MQTT client is not connected. Cannot publish car name.");
+        }
+    }
+
+    public void PublishCarToDb(string carName, int laps)
+    {
+        if (_client != null && _client.IsConnected)
+        {
+            var message = new MqttApplicationMessageBuilder()
+                .WithTopic("cars/db")
+                .WithPayload(JsonSerializer.Serialize(new { carName = carName.Split('-')[1], laps }))
+                .Build();
+
+            _client.PublishAsync(message);
+        }
+        else
+        {
+            Debug.LogWarning("MQTT client is not connected. Cannot publish car to database.");
+        }
+    }
+    
+    private string GetCarIdWithPrefix(string carId) => "car-" + carId;
 }

@@ -31,10 +31,14 @@ public class GameManager : MonoBehaviour
 
     public void CarFinishedLap(Car car)
     {
+        // Publish the lap completion to MQTT
+        _mqttServiceScript.PublishLapCompletion(car.name, car.Laps);
+        
         if (car.Laps >= 10)
         {
             _gameHasEnded = true;
             _winnerCar = car;
+            _mqttServiceScript.PublishCarToDb(car.name, car.Laps);
             Debug.Log("Game has ended!");
         }
     }
