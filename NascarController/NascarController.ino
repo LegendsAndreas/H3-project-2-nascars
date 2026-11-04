@@ -3,14 +3,14 @@
 #include <PubSubClient.h>
 #include "secrets.h"
 
-WiFiSSLClient wifiClient;
+WiFiClient wifiClient;
 PubSubClient mqtt(wifiClient);
 MKRIoTCarrier carrier;
-
 int r, g, b;
 unsigned long lastPublish = 0;
-const unsigned long PUBLISH_INTERVAL = 200;
+const unsigned long PUBLISH_INTERVAL = 30;
 char CarId[33];
+
 void updateLights() {
   carrier.leds.clear();
   for (int i = 0; i < 5; i++) {
@@ -24,7 +24,7 @@ void connectMqtt() {
 
     Serial.print("Connecting to MQTT... ");
     String clientId = String("Arduino-") + CarId;
-    if (mqtt.connect(clientId.c_str(), MQTT_USERNAME, MQTT_PASSWORD, MQTT_TOPIC_REMOVE, 0, true, CarId)) {
+    if (mqtt.connect(clientId.c_str(), MQTT_TOPIC_REMOVE, 0, true, CarId)) {
         Serial.println("connected");
     } else {
         Serial.print("failed, state: ");
@@ -32,6 +32,7 @@ void connectMqtt() {
         delay(2000);
     }
 }
+
 void connectWiFi() {
     Serial.print("Connecting to Wi-Fi");
 
@@ -72,13 +73,15 @@ String getDeviceId() {
 }
 
 void setup() {
+  Serial.begin(115200);
+  delay(1000);
   carrier.noCase();
   carrier.begin();
   String id = getDeviceId();
   id.toCharArray(CarId, sizeof(CarId));
   connectWiFi();
   mqtt.setServer(MQTT_SERVER, MQTT_PORT);
-  mqtt.setKeepAlive(15);
+  mqtt.setKeepAlive(5);
   mqtt.setSocketTimeout(2);
   connectMqtt();
   snprintf(CarId, sizeof(CarId), "%s", CarId);
@@ -91,11 +94,20 @@ void loop() {
 
     if (!mqtt.connected()) {
         connectMqtt();
+        mqtt.publish(MQTT_TOPIC_NEW, CarId);
     }
 
-    mqtt.loop();
+static unsigned long lastLoopSuccess = millis();
 
-    if (millis() - lastPublish >= PUBLISH_INTERVAL) {
+if (!mqtt.loop()) {
+    Serial.print("MQTT loop failed after ");
+    Serial.print(millis() - lastLoopSuccess);
+    Serial.println(" ms");
+} else {
+    lastLoopSuccess = millis();
+}
+
+     if (millis() - lastPublish >= PUBLISH_INTERVAL) {
         lastPublish = millis();
 
         float x, y, z;
