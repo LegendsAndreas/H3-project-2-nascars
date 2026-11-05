@@ -215,7 +215,7 @@ public class MqttClient : MonoBehaviour
         {
             var message = new MqttApplicationMessageBuilder()
                 .WithTopic("cars/laps")
-                .WithPayload(JsonSerializer.Serialize(new { carId = carName.Split('-')[1], lapCount }))
+                .WithPayload(JsonSerializer.Serialize(new { content = carName.Split('-')[1], lapCount }))
                 .Build();
 
             _client.PublishAsync(message);
@@ -232,7 +232,7 @@ public class MqttClient : MonoBehaviour
         {
             var message = new MqttApplicationMessageBuilder()
                 .WithTopic("cars/name")
-                .WithPayload(JsonSerializer.Serialize(new { carId, name = username }))
+                .WithPayload(JsonSerializer.Serialize(new { content = carId, name = username }))
                 .Build();
 
             _client.PublishAsync(message);
