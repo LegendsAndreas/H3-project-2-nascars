@@ -8,3 +8,5 @@
 #define MQTT_TOPIC_NEW "cars/new"
 #define MQTT_TOPIC_INPUT "cars/input"
 #define MQTT_TOPIC_REMOVE "cars/remove"
+#define NAME_TOPIC "cars/name"
+#define LAPS_TOPIC "cars/laps"
