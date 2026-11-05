@@ -24,7 +24,6 @@ void updateLapLeds(int lap) {
             carrier.leds.setPixelColor(i, 0, 0, 0);
         }
     }
-
     carrier.leds.show();
 }
 void displayName(String name){
@@ -47,11 +46,6 @@ void displayName(String name){
 }
 void callback(char* topic, byte* payload, unsigned int length)
 {
-  String content = "";
-  for (size_t i = 0; i < length; i++)
-  {
-    content.concat((char)payload[i]);
-  }
   JsonDocument doc;
   DeserializationError error = deserializeJson(doc, payload);
   if (error) {
@@ -74,11 +68,17 @@ void connectMqtt() {
     String clientId = String("Arduino-") + CarId;
     if (mqtt.connect(clientId.c_str(), MQTT_TOPIC_REMOVE, 0, true, CarId)) {
         Serial.println("connected");
+        mqtt.subscribe(NAME_TOPIC);
+        mqtt.subscribe(LAPS_TOPIC);
+        mqtt.publish(MQTT_TOPIC_NEW, CarId);
     } else {
         Serial.print("failed, state: ");
         Serial.println(mqtt.state());
         delay(2000);
     }
+    mqtt.subscribe(NAME_TOPIC);
+    mqtt.subscribe(LAPS_TOPIC);
+
 }
 void connectWiFi() {
     Serial.print("Connecting to Wi-Fi");
@@ -128,42 +128,43 @@ void setup() {
   id.toCharArray(CarId, sizeof(CarId));
   connectWiFi();
   mqtt.setServer(MQTT_SERVER, MQTT_PORT);
-  mqtt.setKeepAlive(5);
-  mqtt.setSocketTimeout(2);
+  mqtt.setKeepAlive(30);
+  mqtt.setSocketTimeout(3);
+  mqtt.setBufferSize(512);
   connectMqtt();
   mqtt.setCallback(callback);
-  snprintf(CarId, sizeof(CarId), "%s", CarId);
   mqtt.publish(MQTT_TOPIC_NEW, CarId);
-  mqtt.subscribe(NAME_TOPIC);
-  mqtt.subscribe(LAPS_TOPIC);
 }
 void loop() {
- if (WiFi.status() != WL_CONNECTED) {
-    connectWiFi();
-  }
-  if (!mqtt.connected()) {
-    connectMqtt();
-    mqtt.publish(MQTT_TOPIC_NEW, CarId);
-  }
-  mqtt.loop();
-  if (millis() - lastPublish >= PUBLISH_INTERVAL) {
-    lastPublish = millis();
-    float x, y, z;
-    carrier.IMUmodule.readAcceleration(x, y, z);
-    char payload[128];
-    snprintf(payload, sizeof(payload),
-      "{\"carId\":\"%s\",\"throttle\":%.3f,\"steering\":%.3f}",
-      CarId, x, y);
-    if (!mqtt.connected()) {
-      Serial.println("MQTT disconnected, state: ");
-      Serial.println(mqtt.state());
-      return;
+    if (WiFi.status() != WL_CONNECTED) {
+        connectWiFi();
     }
-    if (mqtt.publish(MQTT_TOPIC_INPUT, payload)) {
-    } else {
-        Serial.println("MQTT publish failed");
-        Serial.print("MQTT state: ");
-        Serial.println(mqtt.state());
-      }
-  }
+
+    if (!mqtt.connected()) {
+        connectMqtt();
+    }
+
+    mqtt.loop();
+
+    if (millis() - lastPublish >= 100) {
+        lastPublish = millis();
+
+        float x, y, z;
+
+        if (!carrier.IMUmodule.readAcceleration(x, y, z)) {
+            Serial.println("IMU read failed");
+            return;
+        }
+
+        char payload[128];
+
+        snprintf(payload, sizeof(payload),
+          "{\"carId\":\"%s\",\"throttle\":%.3f,\"steering\":%.3f}",
+          CarId, x, y);
+
+        if (!mqtt.publish(MQTT_TOPIC_INPUT, payload)) {
+            Serial.println("MQTT publish failed");
+            Serial.println(mqtt.state());
+        }
+    }
 }
