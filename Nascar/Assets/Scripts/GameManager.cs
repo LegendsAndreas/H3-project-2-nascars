@@ -3,8 +3,8 @@ using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
-    private bool _gameHasBegun = false;
-    private bool _gameHasEnded = false;
+    public bool GameHasBegun = false;
+    public bool GameHasEnded = false;
     private Car _winnerCar = null;
     public GameObject MqttService;
     private MqttClient _mqttServiceScript;
@@ -21,7 +21,7 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        if (_gameHasEnded)
+        if (GameHasEnded)
         {
             // Handle game end logic
         }
@@ -36,18 +36,18 @@ public class GameManager : MonoBehaviour
         
         if (car.Laps >= 10)
         {
-            _gameHasEnded = true;
+            GameHasEnded = true;
             _winnerCar = car;
-            _mqttServiceScript.PublishCarToDb(car.name, car.Laps);
+            _mqttServiceScript.PublishCarToDb(car.DisplayName, car.Laps);
             Debug.Log("Game has ended!");
         }
     }
     
     public void StartGame()
     {
-        if (!_gameHasBegun)
+        if (!GameHasBegun)
         {
-            _gameHasBegun = true;
+            GameHasBegun = true;
             JoinGameCanvas.enabled = false;
             Debug.Log("Game has started!");
         }

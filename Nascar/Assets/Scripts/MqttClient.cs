@@ -7,7 +7,9 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using MQTTnet;
 using MQTTnet.Client;
+using TMPro;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class MqttClient : MonoBehaviour
 {
@@ -30,6 +32,30 @@ public class MqttClient : MonoBehaviour
     private IMqttClient _client;
     private readonly ConcurrentQueue<Action> _mainThreadQueue = new ConcurrentQueue<Action>();
     private readonly ConcurrentDictionary<string, (float throttle, float steering)> _latestInputs = new();
+    
+    private List<DisplayName> _carDisplayNames = new List<DisplayName>()
+    {
+        new DisplayName { Name = "Benny the Grapist", IsFree = true },
+        new DisplayName { Name = "Boss Man", IsFree = true },
+        new DisplayName { Name = "Jimmy the Ringer", IsFree = true },
+        new DisplayName { Name = "Willy the Free", IsFree = true },
+        new DisplayName { Name = "William the Rigger", IsFree = true },
+        new DisplayName { Name = "Anton the Ripper", IsFree = true },
+        new DisplayName { Name = "Eggs Benedict", IsFree = true },
+        new DisplayName { Name = "Eggs Scrambled", IsFree = true },
+        new DisplayName { Name = "Scrambled Eggs & Benedict Eggs", IsFree = true },
+        new DisplayName { Name = "Eggs Benedict & Scrambled Eggs", IsFree = true },
+        new DisplayName { Name = "The Wife", IsFree = true },
+        new DisplayName { Name = "The Kids", IsFree = true },
+        new DisplayName { Name = "The Dog", IsFree = true },
+        new DisplayName { Name = "Givin' lips George", IsFree = true },
+        new DisplayName { Name = "My Dad", IsFree = true },
+        new DisplayName { Name = "Idunno", IsFree = true },
+        new DisplayName { Name = "The step Dad", IsFree = true },
+        new DisplayName { Name = "Uncle Tommy", IsFree = true },
+        new DisplayName { Name = "\"\"", IsFree = true },
+        new DisplayName { Name = "Cousin Vinny", IsFree = true },
+    };
 
     public class NewInput
     {
@@ -47,6 +73,12 @@ public class MqttClient : MonoBehaviour
         public Transform Transform;
         public bool IsFree = true;
     }
+
+    public class DisplayName
+    {
+        public string Name { get; set; }
+        public bool IsFree { get; set; }
+    }
     
     [Serializable]
     public class CarSprite
@@ -57,7 +89,7 @@ public class MqttClient : MonoBehaviour
 
     private async void Start()
     {
-        _gameManagerScript = GameManager.GetComponent<GameManager>();
+        _gameManagerScript = GameManager.GetComponentInChildren<GameManager>();
 
         try
         {
@@ -123,6 +155,8 @@ public class MqttClient : MonoBehaviour
             catch (Exception ex) { Debug.LogException(ex); }
         }
         // apply only the latest input per car, once per frame
+        if (!_gameManagerScript.GameHasBegun && !_gameManagerScript.GameHasEnded) return;
+        
         foreach (var kvp in _latestInputs)
             UpdateCarInput(kvp.Key, kvp.Value.throttle, kvp.Value.steering);
     }
@@ -160,10 +194,22 @@ public class MqttClient : MonoBehaviour
 
         var car = Instantiate(CarPrefab, spawn, rot);
         car.name = GetCarIdWithPrefix(carId);
-        car.GetComponent<SpriteRenderer>().sprite = carSprite.Sprite;
+        Car carScript = car.GetComponentInChildren<Car>();
+        carScript.name = GetCarIdWithPrefix(carId);
+        carScript.SetSprite(carSprite.Sprite);
         carSprite.IsFree = false;
         
-        PublishCarName(carId, carSprite.Sprite.name);
+        // randomly chosen display name from the list of free names
+        DisplayName displayName = _carDisplayNames
+            .Where(dn => dn.IsFree)
+            .OrderBy(_ => Random.value)
+            .FirstOrDefault()!;
+        car.GetComponentInChildren<TextMeshPro>().text = displayName.Name;
+        
+        carScript.DisplayName = displayName.Name;
+        
+        PublishCarName(carId, displayName.Name);
+        displayName.IsFree = false;
         
         Cars.Add(car);
         _gameManagerScript.UpdatePlayerList(Cars.ToArray());
@@ -197,7 +243,7 @@ public class MqttClient : MonoBehaviour
         var car = Cars.Find(c => c.name == GetCarIdWithPrefix(carId));
         if (car != null)
         {
-            var carScript = car.GetComponent<Car>();
+            var carScript = car.GetComponentInChildren<Car>();
             if (carScript != null)
             {
                 carScript.Movement(throttle, steering);
@@ -215,7 +261,7 @@ public class MqttClient : MonoBehaviour
         {
             var message = new MqttApplicationMessageBuilder()
                 .WithTopic("cars/laps")
-                .WithPayload(JsonSerializer.Serialize(new { content = carName.Split('-')[1], lapCount }))
+                .WithPayload(JsonSerializer.Serialize(new { carId = carName.Split('-')[1], content = lapCount }))
                 .Build();
 
             _client.PublishAsync(message);
@@ -232,7 +278,7 @@ public class MqttClient : MonoBehaviour
         {
             var message = new MqttApplicationMessageBuilder()
                 .WithTopic("cars/name")
-                .WithPayload(JsonSerializer.Serialize(new { content = carId, name = username }))
+                .WithPayload(JsonSerializer.Serialize(new { carId, content = username }))
                 .Build();
 
             _client.PublishAsync(message);
@@ -243,13 +289,13 @@ public class MqttClient : MonoBehaviour
         }
     }
 
-    public void PublishCarToDb(string carName, int laps)
+    public void PublishCarToDb(string carDisplayName, int laps)
     {
         if (_client != null && _client.IsConnected)
         {
             var message = new MqttApplicationMessageBuilder()
                 .WithTopic("cars/db")
-                .WithPayload(JsonSerializer.Serialize(new { carName = carName.Split('-')[1], laps }))
+                .WithPayload(JsonSerializer.Serialize(new { carName = carDisplayName, laps }))
                 .Build();
 
             _client.PublishAsync(message);

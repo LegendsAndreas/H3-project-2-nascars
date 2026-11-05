@@ -10,16 +10,19 @@ public class Car : MonoBehaviour
     public float Acceleration = 6f;
     public float BrakeForce = 10f;
     public float Friction = 3f;
+    public bool ManualControl = false;
 
     [Header("Steering")] public float TurnSpeed = 120f; // degrees per second at full speed
 
     private float _currentSpeed;
+    [SerializeField] private SpriteRenderer carRenderer;
     
     [Header("Race Info")]
     public int Laps = 0;
     public bool HasHitCheckpointOne = false;
     public bool HasHitCheckpointTwo = false;
     public bool WrongDirection = false;
+    public string DisplayName = "Car";
     
     // private GameManager _gameManagerScript;
 
@@ -34,7 +37,7 @@ public class Car : MonoBehaviour
     
     void Update()
     {
-        // ManualMovement();
+        if (ManualControl) ManualMovement();
     }
 
     public void ManualMovement()
@@ -91,12 +94,12 @@ public class Car : MonoBehaviour
         if (throttle > 0f)
         {
             float rate = _currentSpeed > 0f ? BrakeForce : Acceleration;
-            _currentSpeed -= rate * dt;
+            _currentSpeed -= rate * throttle * dt;
         }
         else if (throttle < 0f)
         {
             float rate = _currentSpeed < 0f ? BrakeForce : Acceleration;
-            _currentSpeed += rate * dt;
+            _currentSpeed += rate * -throttle * dt;
         }
         // No input: friction slows the car toward 0
         else
@@ -114,5 +117,10 @@ public class Car : MonoBehaviour
 
         // Move along the direction the car is facing
         transform.position += transform.up * (_currentSpeed * dt);
+    }
+    
+    public void SetSprite(Sprite newSprite)
+    {
+        carRenderer.sprite = newSprite;
     }
 }

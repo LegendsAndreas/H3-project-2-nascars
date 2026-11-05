@@ -1193,6 +1193,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c38a346408665b4fab96071ee97a1c6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
+  GameHasBegun: 0
+  GameHasEnded: 0
   MqttService: {fileID: 2025152277}
   JoinGameCanvas: {fileID: 667999417}
 --- !u!1001 &374473428
@@ -3802,7 +3804,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: -44.1}
-  m_SizeDelta: {x: 160, y: 50}
+  m_SizeDelta: {x: 400, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!4 &1455775054 stripped
 Transform:
@@ -5428,7 +5430,7 @@ MonoBehaviour:
   MqttUri: broker.hivemq.com:8883
   MqttUsername: unity-client
   MqttPassword: Unity1234!
-  CarPrefab: {fileID: 24713884864753971, guid: 3611839dd8db7cf4681b7b654477fc53, type: 3}
+  CarPrefab: {fileID: 4954764207992679214, guid: 35ac4d5cf8282324583a7b9cdf879c86, type: 3}
   GameManager: {fileID: 372474296}
   CarSpawnPoints:
   - Transform: {fileID: 1429638058}

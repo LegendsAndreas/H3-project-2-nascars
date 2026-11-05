@@ -19,7 +19,7 @@ public class JoinGame : MonoBehaviour
         _playerListText.text = "Players:\n";
         foreach (GameObject player in cars)
         {
-            _playerListText.text += "- " + player.name + "\n";
+            _playerListText.text += "- " + player.name + " - " + player.GetComponentInChildren<TextMeshPro>().text + "\n";
         }
     }
 }
