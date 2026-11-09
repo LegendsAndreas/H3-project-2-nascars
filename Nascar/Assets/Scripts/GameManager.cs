@@ -68,7 +68,7 @@ public class GameManager : MonoBehaviour
         GameHasEnded = false;
         _winnerCar = null;
         JoinGameCanvas.enabled = true;
-        EndScreenCanvas.enabled = false;
+        EndScreenCanvas.gameObject.SetActive(false);
 
         foreach (MqttClient.SpawnPoint carSpawnPoint in _mqttServiceScript.CarSpawnPoints)
         {
