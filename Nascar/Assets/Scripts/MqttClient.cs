@@ -155,7 +155,7 @@ public class MqttClient : MonoBehaviour
             catch (Exception ex) { Debug.LogException(ex); }
         }
         // apply only the latest input per car, once per frame
-        if (!_gameManagerScript.GameHasBegun && !_gameManagerScript.GameHasEnded) return;
+        if (!_gameManagerScript.GameHasBegun || _gameManagerScript.GameHasEnded) return;
         
         foreach (var kvp in _latestInputs)
             UpdateCarInput(kvp.Key, kvp.Value.throttle, kvp.Value.steering);
@@ -251,7 +251,7 @@ public class MqttClient : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"Car with ID {carId} not found for input update.");
+            // Debug.LogWarning($"Car with ID {carId} not found for input update.");
         }
     }
     
