@@ -22,3 +22,7 @@ riderModule.iml
 .idea/
 .vscode/
 appsettings.*.json
+# Backend local configuration and test data
+.vs/
+*.csproj.user
+.test-artifacts/
