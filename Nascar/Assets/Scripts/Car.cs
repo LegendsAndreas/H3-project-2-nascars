@@ -123,4 +123,15 @@ public class Car : MonoBehaviour
     {
         carRenderer.sprite = newSprite;
     }
+
+    public void OnCollisionEnter2D(Collision2D other)
+    {
+        if (other.gameObject.CompareTag("Barrier"))
+        {
+            Debug.Log("Car hit a barrier!");
+            float dt = Time.deltaTime;
+            _currentSpeed = Mathf.Clamp(_currentSpeed - 5, -MaxReverseSpeed, MaxSpeed);
+            transform.position += transform.up * (_currentSpeed * dt);
+        }
+    }
 }
