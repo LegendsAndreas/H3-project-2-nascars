@@ -11,6 +11,8 @@ public class Car : MonoBehaviour
     public float BrakeForce = 10f;
     public float Friction = 3f;
     public bool ManualControl = false;
+    public float OnCollisionFriction = 5f;
+    public float OnCollisionMinumumSpeed = 1f;
 
     [Header("Steering")] public float TurnSpeed = 120f; // degrees per second at full speed
 
@@ -129,9 +131,16 @@ public class Car : MonoBehaviour
         if (other.gameObject.CompareTag("Barrier"))
         {
             Debug.Log("Car hit a barrier!");
-            float dt = Time.deltaTime;
-            _currentSpeed = Mathf.Clamp(_currentSpeed - 5, -MaxReverseSpeed, MaxSpeed);
-            transform.position += transform.up * (_currentSpeed * dt);
+            _currentSpeed = Mathf.Clamp(_currentSpeed - OnCollisionFriction, OnCollisionMinumumSpeed, MaxSpeed);
         }
+    }
+
+    public void ResetCar()
+    {
+        _currentSpeed = 0f;
+        Laps = 0;
+        HasHitCheckpointOne = false;
+        HasHitCheckpointTwo = false;
+        WrongDirection = false;
     }
 }

@@ -81,9 +81,7 @@ public class GameManager : MonoBehaviour
         foreach (GameObject car in cars)
         {
             Car carScript = car.GetComponent<Car>();
-            carScript.Laps = 0;
-            carScript.HasHitCheckpointOne = false;
-            carScript.HasHitCheckpointTwo = false;
+            carScript.ResetCar();
             
             var sp = _mqttServiceScript.CarSpawnPoints.Find(s => s.IsFree && s.Transform != null);
             if (sp != null)
