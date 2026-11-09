@@ -31,6 +31,8 @@ public class GameManager : MonoBehaviour
 
     public void CarFinishedLap(Car car)
     {
+        if (!GameHasBegun || GameHasEnded) return;
+
         // Publish the lap completion to MQTT
         _mqttServiceScript.PublishLapCompletion(car.name, car.Laps);
         
