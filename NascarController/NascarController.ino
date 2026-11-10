@@ -8,7 +8,7 @@ WiFiClient wifiClient;
 PubSubClient mqtt(wifiClient);
 MKRIoTCarrier carrier;
 unsigned long lastPublish = 0;
-const unsigned long PUBLISH_INTERVAL = 30;
+const unsigned long PUBLISH_INTERVAL = 20;
 char CarId[33];
 
 void updateLapLeds(int lap) {
@@ -26,6 +26,7 @@ void updateLapLeds(int lap) {
     }
     carrier.leds.show();
 }
+
 void displayName(String name){
   carrier.display.fillScreen(ST77XX_BLACK);
   carrier.display.setTextColor(ST77XX_WHITE);
@@ -44,6 +45,7 @@ void displayName(String name){
   carrier.display.setCursor(x, y);
   carrier.display.println(name);
 }
+
 void callback(char* topic, byte* payload, unsigned int length)
 {
   JsonDocument doc;
@@ -60,6 +62,7 @@ void callback(char* topic, byte* payload, unsigned int length)
       displayName(doc["content"].as<String>());
   }
 }
+
 void connectMqtt() {
     Serial.print("Wi-Fi status: ");
     Serial.println(WiFi.status());
@@ -70,7 +73,6 @@ void connectMqtt() {
         Serial.println("connected");
         mqtt.subscribe(NAME_TOPIC);
         mqtt.subscribe(LAPS_TOPIC);
-        mqtt.publish(MQTT_TOPIC_NEW, CarId);
     } else {
         Serial.print("failed, state: ");
         Serial.println(mqtt.state());
@@ -80,6 +82,7 @@ void connectMqtt() {
     mqtt.subscribe(LAPS_TOPIC);
 
 }
+
 void connectWiFi() {
     Serial.print("Connecting to Wi-Fi");
 
@@ -93,6 +96,7 @@ void connectWiFi() {
     Serial.println("\nWi-Fi connected");
     Serial.println(WiFi.localIP());
 }
+
 String getDeviceId() {
   const uint32_t* serialAddress =
       reinterpret_cast<const uint32_t*>(0x0080A00C);
@@ -135,6 +139,7 @@ void setup() {
   mqtt.setCallback(callback);
   mqtt.publish(MQTT_TOPIC_NEW, CarId);
 }
+
 void loop() {
     if (WiFi.status() != WL_CONNECTED) {
         connectWiFi();
@@ -146,7 +151,7 @@ void loop() {
 
     mqtt.loop();
 
-    if (millis() - lastPublish >= 100) {
+    if (millis() - lastPublish >= PUBLISH_INTERVAL) {
         lastPublish = millis();
 
         float x, y, z;
