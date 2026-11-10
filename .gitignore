@@ -26,3 +26,5 @@ appsettings.*.json
 .vs/
 *.csproj.user
 .test-artifacts/
+.env
+.env.*

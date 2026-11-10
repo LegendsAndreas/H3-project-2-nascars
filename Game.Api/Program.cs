@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Game.Api.Mqtt;
 using Game.Api.Racing;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
@@ -64,4 +65,7 @@ app.MapGet("/health/database", async (GameDbContext db, CancellationToken token)
     catch (NpgsqlException) { return Results.Problem(statusCode: 503, title: "Database unreachable."); }
 });
 app.MapControllers();
+var mqttOptions = app.Services.GetRequiredService<IOptions<MqttOptions>>().Value;
+// Acquire before hosted services connect; Run disposes the host before releasing this handle.
+using var mqttConsumerLock = mqttOptions.Enabled ? MqttConsumerLock.Acquire(mqttOptions) : null;
 app.Run();

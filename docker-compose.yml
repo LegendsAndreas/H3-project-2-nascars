@@ -1,0 +1,19 @@
+services:
+  backend:
+    build:
+      context: ./Game.Api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    stop_grace_period: 30s
+    expose:
+      - "8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__GameDatabase: "${GAME_DATABASE_CONNECTION_STRING:?Set GAME_DATABASE_CONNECTION_STRING in Dokploy}"
+      Mqtt__Enabled: "${MQTT_ENABLED:-false}"
+      Mqtt__Host: "138.199.155.78"
+      Mqtt__Port: "1883"
+      Mqtt__UseTls: "false"
+    deploy:
+      replicas: 1
