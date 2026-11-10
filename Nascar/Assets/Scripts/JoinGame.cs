@@ -6,7 +6,7 @@ using UnityEngine.UI;
 public class JoinGame : MonoBehaviour
 {
     public Button JoinGameButton;
-    public TextMeshProUGUI _playerListText;
+    public TextMeshProUGUI PlayerListText;
     
     void Start()
     {
@@ -16,10 +16,10 @@ public class JoinGame : MonoBehaviour
 
     public void UpdatePlayerList(GameObject[] cars)
     {
-        _playerListText.text = "Players:\n";
+        PlayerListText.text = "Players:\n";
         foreach (GameObject player in cars)
         {
-            _playerListText.text += "- " + player.name + " - " + player.GetComponentInChildren<TextMeshPro>().text + "\n";
+            PlayerListText.text += "- " + player.name + " - " + player.GetComponentInChildren<TextMeshPro>().text + "\n";
         }
     }
 }
