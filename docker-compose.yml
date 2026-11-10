@@ -17,3 +17,8 @@ services:
       Mqtt__UseTls: "false"
     deploy:
       replicas: 1
+
+networks:
+  default:
+    external: true
+    name: dokploy-network
