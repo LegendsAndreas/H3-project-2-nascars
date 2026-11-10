@@ -16,29 +16,51 @@ public class Car : MonoBehaviour
 
     [Header("Steering")] public float TurnSpeed = 120f; // degrees per second at full speed
 
-    private float _currentSpeed;
+    [SerializeField] private float _currentSpeed;
+    [SerializeField] private float _currentThrottle;
+    private float _previousThrottle = 0f;
     [SerializeField] private SpriteRenderer carRenderer;
-    
-    [Header("Race Info")]
-    public int Laps = 0;
+
+    [Header("Race Info")] public int Laps = 0;
     public bool HasHitCheckpointOne = false;
     public bool HasHitCheckpointTwo = false;
     public bool WrongDirection = false;
     public string DisplayName = "Car";
-    
+
+    [Header("Audio")] public AudioSource CarAudioSource;
+    public float Volume = 0.1f;
+    public AudioClip CarEngineSound;
+    public AudioClip CarSpeedingUpSound;
+    public AudioClip CarHandBreakingSound;
+    public AudioClip CarReversingSound;
+    private AudioClip _currentClip;
+
     // private GameManager _gameManagerScript;
 
     private void Start()
     {
-        /*_gameManagerScript = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
-        if (_gameManagerScript == null)
+        if (CarEngineSound == null)
         {
-            throw new Exception("GameManager script not found on GameManager object.");
-        }*/
+            throw new Exception("CarEngineSound is not assigned in the inspector.");
+        }
+        if (CarSpeedingUpSound == null)
+        {
+            throw new Exception("CarSpeedingUpSound is not assigned in the inspector.");
+        }
+
+        if (CarHandBreakingSound == null)
+        {
+            throw new Exception("CarHandBreakingSound is not assigned in the inspector.");
+        }
+        if (CarReversingSound == null)
+        {
+            throw new Exception("CarReversingSound is not assigned in the inspector.");
+        }
     }
-    
+
     void Update()
     {
+        CarAudioSource.volume = Volume;
         if (ManualControl) ManualMovement();
     }
 
@@ -90,6 +112,7 @@ public class Car : MonoBehaviour
 
     public void Movement(float throttle, float steer)
     {
+        _currentThrottle = throttle;
         float dt = Time.deltaTime;
 
         // If the throttle is more/less than 0, we apply acceleration/braking.
@@ -97,11 +120,23 @@ public class Car : MonoBehaviour
         {
             float rate = _currentSpeed > 0f ? BrakeForce : Acceleration;
             _currentSpeed -= rate * throttle * dt;
+
+            CarAudioSource.clip = CarHandBreakingSound;
+            if (!CarAudioSource.isPlaying)
+            {
+                CarAudioSource.Play();
+            }
         }
         else if (throttle < 0f)
         {
             float rate = _currentSpeed < 0f ? BrakeForce : Acceleration;
             _currentSpeed += rate * -throttle * dt;
+
+            CarAudioSource.clip = CarSpeedingUpSound;
+            if (!CarAudioSource.isPlaying)
+            {
+                CarAudioSource.Play();
+            }
         }
         // No input: friction slows the car toward 0
         else
@@ -110,6 +145,9 @@ public class Car : MonoBehaviour
         }
 
         _currentSpeed = Mathf.Clamp(_currentSpeed, -MaxReverseSpeed, MaxSpeed);
+
+        CalculateSound(_previousThrottle, throttle, _currentSpeed);
+        _previousThrottle = throttle;
 
         // Steering: scaled by speed so the car can't spin on the spot,
         // and flipped when reversing like a real car
@@ -120,7 +158,7 @@ public class Car : MonoBehaviour
         // Move along the direction the car is facing
         transform.position += transform.up * (_currentSpeed * dt);
     }
-    
+
     public void SetSprite(Sprite newSprite)
     {
         carRenderer.sprite = newSprite;
@@ -128,7 +166,7 @@ public class Car : MonoBehaviour
 
     public void OnCollisionEnter2D(Collision2D other)
     {
-        if (other.gameObject.CompareTag("Barrier"))
+        if (other.gameObject.CompareTag("Barrier") || other.gameObject.CompareTag("Obstacle"))
         {
             Debug.Log("Car hit a barrier!");
             _currentSpeed = Mathf.Clamp(_currentSpeed - OnCollisionFriction, OnCollisionMinumumSpeed, MaxSpeed);
@@ -142,5 +180,37 @@ public class Car : MonoBehaviour
         HasHitCheckpointOne = false;
         HasHitCheckpointTwo = false;
         WrongDirection = false;
+    }
+
+    private void CalculateSound(float previousThrottle, float currentThrottle, float currentSpeed)
+    {
+        // Remember that throttle is inverted, so that when we tilt the arduino forward, the throttle is negative, and when we tilt it backward, the throttle is positive.
+        // So, to make it more readable, we reverse it.
+        currentThrottle = -currentThrottle;
+        Debug.Log($"Throttle: {currentThrottle}, Speed: {currentSpeed}");
+        if (currentThrottle > 0f)
+        {
+            CarAudioSource.clip = CarSpeedingUpSound;
+        }
+        else if (currentThrottle < 0f && currentSpeed > 0f)
+        {
+            CarAudioSource.clip = CarHandBreakingSound;
+        }
+        else if (currentThrottle < 0f && currentSpeed < 0f)
+        {
+            CarAudioSource.clip = CarReversingSound;
+        }
+        else
+        {
+            CarAudioSource.clip = CarEngineSound;
+        }
+
+        if (CarAudioSource.isPlaying)
+        {
+            Debug.Log("Car audio is already playing the correct clip, no need to restart.");
+            return;
+        }
+        Debug.Log($"Car audio clip changed from {_currentClip?.name ?? "null"} to {CarAudioSource.clip?.name ?? "null"}, restarting audio. Audio play: {CarAudioSource.isPlaying}");
+        CarAudioSource.Play();
     }
 }

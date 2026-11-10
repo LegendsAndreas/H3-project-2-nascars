@@ -14,6 +14,8 @@ public class GameManager : MonoBehaviour
     public int MaxLaps = 10;
     public Canvas EndScreenCanvas;
     private EndScreen _endScreenScript;
+    
+    public SoundManager SoundManager;
 
     void Start()
     {
@@ -94,4 +96,6 @@ public class GameManager : MonoBehaviour
 
         Debug.Log("Game has been restarted!");
     }
+    
+    public void PlayCarStartUpSound() => SoundManager.PlayCarStartUpSound();
 }
